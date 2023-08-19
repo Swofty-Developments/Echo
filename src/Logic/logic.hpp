@@ -220,7 +220,6 @@ struct ObjectData {
 	FIELD(bool, m_isRobot) \
 	FIELD(bool, m_isSpider) \
 	FIELD(bool, m_isLocked) \
-	FIELD(bool, m_unk) \
 	FIELD(float, m_unk69C) \
 	FIELD(double, m_lastJumpTime) \
 	FIELD(double, m_unknown20) \
@@ -244,17 +243,12 @@ struct ObjectData {
 	PLFIELD(bool, unk49C) \
 	PLFIELD(bool, m_bHasCheated) \
 	PLFIELD(bool, unk2DC) \
-	PLFIELD(bool, unknown5e4) \
 	PLFIELD(int, unk2E8) \
 	PLFIELD(int, unk2D8) \
 	PLFIELD(int, unk2E4) \
 	PLFIELD(int, unk2E0) \
-	PLFIELD(int, m_ballFrameSeed) \
 	PLFIELD(float, unk3B8) \
 	PLFIELD(float, m_cameraX) \
-	PLFIELD(float, unknown5ec) \
-	PLFIELD(float, m_lockGroundToCamera) \
-	PLFIELD(float, unknown5f4) \
 	PLFIELD(float, unk2FC) \
 	PLFIELD(float, m_currentShakeStrength) \
 	PLFIELD(float, m_currentShakeInterval) \

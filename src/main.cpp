@@ -16,6 +16,7 @@
 #include <stdexcept>
 #include "Logic/convertible.h";
 #include "Logic/Conversions/tasbot.h"
+#include <unordered_set>
 
 using json = nlohmann::json;
 
@@ -95,11 +96,29 @@ void writeConfig() {
 
 	j["max_cps"] = logic.max_cps;
 
+	j["layout_mode"] = logic.hacks.layoutMode;
+	j["show_hitboxes"] = logic.hacks.showHitboxes;
+	j["show_modifiers"] = logic.hacks.showDecorations;
+	j["hitbox_thickness"] = logic.hacks.hitboxThickness;
+	j["fill_hitboxes"] = logic.hacks.fillHitboxes;
+	j["backgroundColor"] = { logic.hacks.backgroundColor[0], logic.hacks.backgroundColor[1], logic.hacks.backgroundColor[2] };
+	j["blocksColor"] = { logic.hacks.blocksColor[0], logic.hacks.blocksColor[1], logic.hacks.blocksColor[2] };
+
+	j["solidHitboxColor"] = { logic.hacks.solidHitboxColor[0], logic.hacks.solidHitboxColor[1], logic.hacks.solidHitboxColor[2], logic.hacks.solidHitboxColor[3] };
+	j["slopeHitboxColor"] = { logic.hacks.slopeHitboxColor[0], logic.hacks.slopeHitboxColor[1], logic.hacks.slopeHitboxColor[2], logic.hacks.slopeHitboxColor[3] };
+	j["hazardHitboxColor"] = { logic.hacks.hazardHitboxColor[0], logic.hacks.hazardHitboxColor[1], logic.hacks.hazardHitboxColor[2], logic.hacks.hazardHitboxColor[3] };
+	j["portalHitboxColor"] = { logic.hacks.portalHitboxColor[0], logic.hacks.portalHitboxColor[1], logic.hacks.portalHitboxColor[2], logic.hacks.portalHitboxColor[3] };
+	j["padHitboxColor"] = { logic.hacks.padHitboxColor[0], logic.hacks.padHitboxColor[1], logic.hacks.padHitboxColor[2], logic.hacks.padHitboxColor[3] };
+	j["ringHitboxColor"] = { logic.hacks.ringHitboxColor[0], logic.hacks.ringHitboxColor[1], logic.hacks.ringHitboxColor[2], logic.hacks.ringHitboxColor[3] };
+	j["collectibleHitboxColor"] = { logic.hacks.collectibleHitboxColor[0], logic.hacks.collectibleHitboxColor[1], logic.hacks.collectibleHitboxColor[2], logic.hacks.collectibleHitboxColor[3] };
+	j["modifierHitboxColor"] = { logic.hacks.modifierHitboxColor[0], logic.hacks.modifierHitboxColor[1], logic.hacks.modifierHitboxColor[2], logic.hacks.modifierHitboxColor[3] };
+	j["playerHitboxColor"] = { logic.hacks.playerHitboxColor[0], logic.hacks.playerHitboxColor[1], logic.hacks.playerHitboxColor[2], logic.hacks.playerHitboxColor[3] };
+	j["rotatedHitboxColor"] = { logic.hacks.rotatedHitboxColor[0], logic.hacks.rotatedHitboxColor[1], logic.hacks.rotatedHitboxColor[2], logic.hacks.rotatedHitboxColor[3] };
+	j["centerHitboxColor"] = { logic.hacks.centerHitboxColor[0], logic.hacks.centerHitboxColor[1], logic.hacks.centerHitboxColor[2], logic.hacks.centerHitboxColor[3] };
+
 	auto& audiospeedhack = AudiopitchHack::getInstance();
 
 	j["audio_speedhack"] = audiospeedhack.isEnabled();
-
-	j["use_json"] = logic.use_json_for_files;
 
 	j["autoclicker"]["press_interval"] = Autoclicker::get().getFramesBetweenPresses();
 	j["autoclicker"]["release_interval"] = Autoclicker::get().getFramesBetweenReleases();
@@ -171,9 +190,40 @@ void writeConfig() {
 	j["style_pos_x"] = GUI::get().style_pos.x;
 	j["style_pos_y"] = GUI::get().style_pos.y;
 
+	j["clickbot_pos_x"] = GUI::get().clickbot_pos.x;
+	j["clickbot_pos_y"] = GUI::get().clickbot_pos.y;
+
 	j["editor_auto_scroll"] = GUI::get().editor_auto_scroll;
 
 	j["clickbot_enabled"] = logic.clickbot_enabled;
+
+	j["volume_multiplier"] = logic.clickbot_volume_mult_saved;
+	j["p1_softs"] = logic.player_1_softs;
+	j["p2_softs"] = logic.player_2_softs;
+	j["p1_softs_time"] = logic.player_1_softs_time;
+	j["p2_softs_time"] = logic.player_2_softs_time;
+	j["p1_softs_volume"] = logic.player_1_softs_volume;
+	j["p2_softs_volume"] = logic.player_2_softs_volume;
+
+	j["p1_hards"] = logic.player_1_hards;
+	j["p2_hards"] = logic.player_2_hards;
+	j["p1_hards_time"] = logic.player_1_hards_time;
+	j["p2_hards_time"] = logic.player_2_hards_time;
+	j["p1_hards_volume"] = logic.player_1_hards_volume;
+	j["p2_hards_volume"] = logic.player_2_hards_volume;
+
+	j["p1_micros"] = logic.player_1_micros;
+	j["p2_micros"] = logic.player_2_micros;
+	j["p1_micros_time"] = logic.player_1_micros_time;
+	j["p2_micros_time"] = logic.player_2_micros_time;
+	j["p1_micros_volume"] = logic.player_1_micros_volume;
+	j["p2_micros_volume"] = logic.player_2_micros_volume;
+	
+	j["p1_clickpack"] = logic.player_1_path;
+	j["p2_clickpack"] = logic.player_2_path;
+	j["algorithm"] = logic.algorithm;
+
+	j["auto_export_to_location"] = logic.export_to_bot_location;
 
 	for (const auto& binding : logic.keybinds.bindings) {
 		const std::string& action = binding.first;
@@ -232,12 +282,108 @@ void readConfig() {
 	recorder.color_fix = getOrDefault(j, "video_color_fix", true);
 
 	logic.max_cps = getOrDefault(j, "max_cps", 15);
+	
+	logic.hacks.layoutMode = getOrDefault(j, "layout_mode", false);
+	logic.hacks.showHitboxes = getOrDefault(j, "show_hitboxes", false);
+	logic.hacks.showDecorations = getOrDefault(j, "show_modifiers", true);
+	logic.hacks.hitboxThickness = getOrDefault(j, "hitbox_thickness", logic.hacks.hitboxThickness);
+	logic.hacks.fillHitboxes = getOrDefault(j, "fill_hitboxes", logic.hacks.fillHitboxes);
+
+	if (j.contains("backgroundColor")) {
+		auto colorArray = j["backgroundColor"];
+		for (int i = 0; i < 3; ++i) {
+			logic.hacks.backgroundColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("blocksColor")) {
+		auto colorArray = j["blocksColor"];
+		for (int i = 0; i < 3; ++i) {
+			logic.hacks.blocksColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("solidHitboxColor")) {
+		auto colorArray = j["solidHitboxColor"];
+		for (int i = 0; i < 4; i++) {
+			logic.hacks.solidHitboxColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("slopeHitboxColor")) {
+		auto colorArray = j["slopeHitboxColor"];
+		for (int i = 0; i < 4; ++i) {
+			logic.hacks.slopeHitboxColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("hazardHitboxColor")) {
+		auto colorArray = j["hazardHitboxColor"];
+		for (int i = 0; i < 4; ++i) {
+			logic.hacks.hazardHitboxColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("portalHitboxColor")) {
+		auto colorArray = j["portalHitboxColor"];
+		for (int i = 0; i < 4; ++i) {
+			logic.hacks.portalHitboxColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("padHitboxColor")) {
+		auto colorArray = j["padHitboxColor"];
+		for (int i = 0; i < 4; ++i) {
+			logic.hacks.padHitboxColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("ringHitboxColor")) {
+		auto colorArray = j["ringHitboxColor"];
+		for (int i = 0; i < 4; ++i) {
+			logic.hacks.ringHitboxColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("collectibleHitboxColor")) {
+		auto colorArray = j["collectibleHitboxColor"];
+		for (int i = 0; i < 4; ++i) {
+			logic.hacks.collectibleHitboxColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("modifierHitboxColor")) {
+		auto colorArray = j["modifierHitboxColor"];
+		for (int i = 0; i < 4; ++i) {
+			logic.hacks.modifierHitboxColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("playerHitboxColor")) {
+		auto colorArray = j["playerHitboxColor"];
+		for (int i = 0; i < 4; ++i) {
+			logic.hacks.playerHitboxColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("rotatedHitboxColor")) {
+		auto colorArray = j["rotatedHitboxColor"];
+		for (int i = 0; i < 4; ++i) {
+			logic.hacks.rotatedHitboxColor[i] = colorArray[i];
+		}
+	}
+
+	if (j.contains("centerHitboxColor")) {
+		auto colorArray = j["centerHitboxColor"];
+		for (int i = 0; i < 4; ++i) {
+			logic.hacks.centerHitboxColor[i] = colorArray[i];
+		}
+	}
+
 
 	auto& audiospeedhack = AudiopitchHack::getInstance();
 
 	audiospeedhack.setEnabled(getOrDefault(j, "audio_speedhack", true));
-
-	logic.use_json_for_files = getOrDefault(j, "use_json", false);
 
 	Autoclicker::get().setFramesBetweenPresses(getOrDefault(j["autoclicker"], "press_interval", 50));
 	Autoclicker::get().setFramesBetweenReleases(getOrDefault(j["autoclicker"], "release_interval", 50));
@@ -310,9 +456,41 @@ void readConfig() {
 	GUI::get().style_pos.x = getOrDefault(j, "style_pos_x", 1425);
 	GUI::get().style_pos.y = getOrDefault(j, "style_pos_y", 35);
 
-	GUI::get().editor_auto_scroll = getOrDefault(j, "editor_auto_scroll", true);
+	GUI::get().clickbot_pos.x = getOrDefault(j, "clickbot_pos_x", 1225);
+	GUI::get().clickbot_pos.y = getOrDefault(j, "clickbot_pos_y", 35);
 
-	logic.clickbot_enabled = getOrDefault(j, "clickbot_enabled", false);
+	GUI::get().editor_auto_scroll = getOrDefault(j, "editor_auto_scroll", GUI::get().editor_auto_scroll);
+
+	logic.clickbot_enabled = getOrDefault(j, "clickbot_enabled", logic.clickbot_enabled);
+	
+	logic.clickbot_volume_mult_saved = getOrDefault(j, "volume_multiplier", logic.clickbot_volume_mult_saved);
+
+	logic.player_1_softs = getOrDefault(j, "p1_softs", logic.player_1_softs);
+	logic.player_2_softs = getOrDefault(j, "p2_softs", logic.player_2_softs);
+	logic.player_1_softs_time = getOrDefault(j, "p1_softs_time", logic.player_1_softs_time);
+	logic.player_2_softs_time = getOrDefault(j, "p2_softs_time", logic.player_2_softs_time);
+	logic.player_1_softs_volume = getOrDefault(j, "p1_softs_volume", logic.player_1_softs_volume);
+	logic.player_2_softs_volume = getOrDefault(j, "p2_softs_volume", logic.player_2_softs_volume);
+
+	logic.player_1_hards = getOrDefault(j, "p1_hards", logic.player_1_hards);
+	logic.player_2_hards = getOrDefault(j, "p2_hards", logic.player_2_hards);
+	logic.player_1_hards_time = getOrDefault(j, "p1_hards_time", logic.player_1_hards_time);
+	logic.player_2_hards_time = getOrDefault(j, "p2_hards_time", logic.player_2_hards_time);
+	logic.player_1_hards_volume = getOrDefault(j, "p1_hards_volume", logic.player_1_hards_volume);
+	logic.player_2_hards_volume = getOrDefault(j, "p2_hards_volume", logic.player_2_hards_volume);
+
+	logic.player_1_micros = getOrDefault(j, "p1_micros", logic.player_1_micros);
+	logic.player_2_micros = getOrDefault(j, "p2_micros", logic.player_2_micros);
+	logic.player_1_micros_time = getOrDefault(j, "p1_micros_time", logic.player_1_micros_time);
+	logic.player_2_micros_time = getOrDefault(j, "p2_micros_time", logic.player_2_micros_time);
+	logic.player_1_micros_volume = getOrDefault(j, "p1_micros_volume", logic.player_1_micros_volume);
+	logic.player_2_micros_volume = getOrDefault(j, "p2_micros_volume", logic.player_2_micros_volume);
+
+	logic.player_1_path = getOrDefault(j, "p1_clickpack", logic.player_1_path);
+	logic.player_2_path = getOrDefault(j, "p2_clickpack", logic.player_2_path);
+	logic.algorithm = getOrDefault(j, "algorithm", logic.algorithm);
+
+	logic.export_to_bot_location = getOrDefault(j, "auto_export_to_location", logic.export_to_bot_location);
 
 	file.close();
 }
@@ -375,6 +553,88 @@ bool isDirectoryEmpty(const std::string& path) {
 	return fs::begin(dirIter) == fs::end(dirIter);
 }
 
+void moveFilesToReplaysDirectory() {
+	// Define the source and destination directories
+	fs::path sourceDir = ".echo";
+	fs::path destinationDir = ".echo/replays";
+
+	// Check if the source directory exists
+	if (!fs::exists(sourceDir)) {
+		std::cout << "Source directory does not exist.\n";
+		return;
+	}
+
+	// Create the destination directory if it doesn't exist
+	if (!fs::exists(destinationDir)) {
+		if (!fs::create_directory(destinationDir)) {
+			std::cout << "Error creating the destination directory.\n";
+			return;
+		}
+	}
+
+	// Iterate through files in the source directory
+	for (const auto& entry : fs::directory_iterator(sourceDir)) {
+		const auto& filePath = entry.path();
+		const std::string filename = filePath.filename().string();
+		const std::string extension = filePath.extension().string();
+
+		// Check if the file ends with ".echo.json"
+		bool isEchoJson = false;
+		if (filename.length() >= 10) if (filename.substr(filename.length() - 10) == ".echo.json") isEchoJson = true;
+		if (extension == ".echo" || isEchoJson) {
+			try {
+				// Move the file to the destination directory
+				fs::rename(filePath, destinationDir / filePath.filename());
+				std::cout << "Moved: " << filePath.filename() << "\n";
+			}
+			catch (const fs::filesystem_error& e) {
+				std::cout << "Error moving " << filePath.filename() << ": " << e.what() << "\n";
+			}
+		}
+	}
+}
+
+void moveFilesToConvertedDirectory() {
+	// Define the source and destination directories
+	fs::path sourceDir = ".echo";
+	fs::path destinationDir = ".echo/converted";
+
+	// Check if the source directory exists
+	if (!fs::exists(sourceDir)) {
+		std::cout << "Source directory does not exist.\n";
+		return;
+	}
+
+	// Create the destination directory if it doesn't exist
+	if (!fs::exists(destinationDir)) {
+		if (!fs::create_directory(destinationDir)) {
+			std::cout << "Error creating the destination directory.\n";
+			return;
+		}
+	}
+
+	// Set containing valid extensions to check against
+	std::unordered_set<std::string> validExtensions = { ".zbf", ".json", ".txt", ".mhr" };
+
+	// Iterate through files in the source directory
+	for (const auto& entry : fs::directory_iterator(sourceDir)) {
+		const auto& filePath = entry.path();
+		const std::string extension = filePath.extension().string();
+
+		// Check if the file ends with a valid extension
+		if (validExtensions.count(extension) > 0) {
+			try {
+				// Move the file to the destination directory
+				fs::rename(filePath, destinationDir / filePath.filename());
+				std::cout << "Moved: " << filePath.filename() << "\n";
+			}
+			catch (const fs::filesystem_error& e) {
+				std::cout << "Error moving " << filePath.filename() << ": " << e.what() << "\n";
+			}
+		}
+	}
+}
+
 DWORD WINAPI my_thread(void* hModule) {
 
 	MH_Initialize();
@@ -403,8 +663,9 @@ DWORD WINAPI my_thread(void* hModule) {
 		".echo/renders",
 		".echo/settings",
 		".echo/themes",
-		".echo/osu",
 		".echo/clickpacks",
+		".echo/replays",
+		".echo/converted",
 	};
 
 	std::vector<std::string> clickbot_paths = {
@@ -419,20 +680,8 @@ DWORD WINAPI my_thread(void* hModule) {
 		".echo/clickpacks/example/micro_releases",
 	};
 
-	/*std::string directoryPath = ".tasbot/macro";
-
-	std::map<std::string, std::shared_ptr<Convertible>> options = {
-	{"TASBot", std::make_shared<TASBot>()}
-	};
-
-	for (const auto& entry : fs::directory_iterator(directoryPath)) {
-		if (entry.is_regular_file()) {
-			options["TASBot"]->import(entry.path().string());
-			Logic::get().sort_inputs();
-			Logic::get().write_file(entry.path().stem().string());
-			Logic::get().inputs.clear();
-		}
-	}*/
+	moveFilesToReplaysDirectory();
+	moveFilesToConvertedDirectory();
 
 	try {
 		for (auto& path : paths) {

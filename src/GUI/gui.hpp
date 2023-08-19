@@ -41,17 +41,29 @@ public:
 
 	float input_fps = 60.f;
 
+	struct Point
+	{
+		double x;
+		double y;
+	};
+
+	std::vector<Point> clickedPoints;
+
+	char inputTextBuffer[65535]; // Buffer to hold the user input
+
 	int offset_frames = 0;
 
 	float scheduler_dt = 60.f;
 
 	char theme_name[1000] = "My Theme";
 
-	bool docked = false;
+	bool docked = true;
 
 	bool change_display_fps = false; // so it doesnt change when ur typing lol
 
 	bool editor_auto_scroll = true;
+
+	bool reload_inputs = false; // bro fuck off with statics
 
 	std::string keybind_prompt = "";
 	std::string keybind_prompt_cache = "";

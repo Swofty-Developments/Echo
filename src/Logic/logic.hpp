@@ -36,19 +36,36 @@ struct Frame {
 	double xVelocity;
 };
 
+struct ShakeFrame {
+	float m_currentShakeStrength;
+	float m_currentShakeInterval;
+	double m_lastShakeTime;
+	cocos2d::CCPoint unk3D8;
+	int number;
+};
+
+struct FPSFrame {
+	double fps;
+	int number;
+};
+
 struct HacksStr
 {
-	bool showHitboxes = false, showDecorations = false;
-	float hitboxThickness = 1.f;
-	int hitboxOpacity = 200, borderOpacity = 255;
+	bool layoutMode = false;
+	bool showHitboxes = false, showDecorations = true;
+	float hitboxThickness = 0.4;
+	int hitboxOpacity = 0, borderOpacity = 255;
+	bool fillHitboxes = false;
+
+	float backgroundColor[3] = { 40.f / 255.f, 125.f / 255.f, 1 }, blocksColor[3] = { 1, 1, 1 };
 
 	bool hitboxTrail = false, trajectory = false;
-	float hitboxTrailLength = 50.0f;
-	int trajectoryAccuracy = 10;
+	float hitboxTrailLength = 50.f;
+	int trajectoryAccuracy = 100;
 
-	float solidHitboxColor[3] = { 0, 0, 1 }, slopeHitboxColor[3] = { 0, 0, 1 }, hazardHitboxColor[3] = { 1, 0, 0 }, portalHitboxColor[3] = { 1, 0.498f, 1 }, padHitboxColor[3] = { 0, 1, 1 },
-		ringHitboxColor[3] = { 0, 1, 1 }, collectibleHitboxColor[3] = { 0.87f, 0.87f, 0.87f }, modifierHitboxColor[3] = { 1, 1, 1 }, playerHitboxColor[3] = { 1, 0.247f, 0.247f },
-		rotatedHitboxColor[3] = { 0.498f, 0, 0 }, centerHitboxColor[3] = { 0, 1, 0 };
+	float solidHitboxColor[4] = { 0, 0, 1, 1 }, slopeHitboxColor[4] = { 0, 0, 1, 1 }, hazardHitboxColor[4] = { 1, 0, 0, 1 }, portalHitboxColor[4] = { 0, 1, 0, 1 }, padHitboxColor[4] = { 0, 1, 0, 1 },
+		ringHitboxColor[4] = { 0, 1, 0, 1 }, collectibleHitboxColor[4] = { 0.88f, 1, 0, 1 }, modifierHitboxColor[4] = { 1, 1, 1, 1 }, playerHitboxColor[4] = { 1, 0.247f, 0.247f, 1 },
+		rotatedHitboxColor[4] = { 0.498f, 0, 0, 1 }, centerHitboxColor[4] = { 0, 0, 1, 1 };
 };
 
 struct ObjectData {
@@ -59,6 +76,7 @@ struct ObjectData {
 	float rotY;
 	float velX;
 	float velY;
+	float rotation;
 
 	float speed1; // m_unk2F4
 	float speed2; // m_unk2F8
@@ -223,52 +241,6 @@ struct ObjectData {
 	FIELD(float, m_unk69C) \
 	FIELD(double, m_lastJumpTime) \
 	FIELD(double, m_unknown20) \
-	FIELD(gd::GameObject*, m_objectSnappedTo) \
-	FIELD(gd::GJRobotSprite*, m_robotSprite) \
-	FIELD(gd::GJSpiderSprite*, m_spiderSprite) \
-	PLFIELD(bool, unk39D) \
-	PLFIELD(bool, unk39E) \
-	PLFIELD(bool, unk534) \
-	PLFIELD(bool, unk4C4) \
-	PLFIELD(bool, m_disableGravityEffect) \
-	PLFIELD(bool, unk39F) \
-	PLFIELD(bool, unk42A) \
-	PLFIELD(bool, unk42B) \
-	PLFIELD(bool, unk2ED) \
-	PLFIELD(bool, unk2EC) \
-	PLFIELD(bool, unk42C) \
-	PLFIELD(bool, m_isCameraShaking) \
-	PLFIELD(bool, unk496) \
-	PLFIELD(bool, unk497) \
-	PLFIELD(bool, unk49C) \
-	PLFIELD(bool, m_bHasCheated) \
-	PLFIELD(bool, unk2DC) \
-	PLFIELD(int, unk2E8) \
-	PLFIELD(int, unk2D8) \
-	PLFIELD(int, unk2E4) \
-	PLFIELD(int, unk2E0) \
-	PLFIELD(float, unk3B8) \
-	PLFIELD(float, m_cameraX) \
-	PLFIELD(float, unk2FC) \
-	PLFIELD(float, m_currentShakeStrength) \
-	PLFIELD(float, m_currentShakeInterval) \
-	PLFIELD(float, unk300) \
-	PLFIELD(float, unk304) \
-	PLFIELD(float, unk308) \
-	PLFIELD(float, unk30C) \
-	PLFIELD(double, unk508) \
-	PLFIELD(double, unk4E8) \
-	PLFIELD(double, unk4E0) \
-	PLFIELD(double, m_lastShakeTime) \
-	PLFIELD(cocos2d::CCArray*, unk354) \
-	PLFIELD(cocos2d::CCArray*, unk358) \
-	PLFIELD(cocos2d::CCArray*, unk35C) \
-	PLFIELD(cocos2d::CCArray*, unk360) \
-	PLFIELD(cocos2d::CCArray*, unk37C) \
-	PLFIELD(cocos2d::CCArray*, unk498) \
-	PLFIELD(cocos2d::CCArray*, unk4D4) \
-	PLFIELD(gd::GJGroundLayer*, m_bottomGround) \
-	PLFIELD(gd::GJGroundLayer*, m_topGround) \
 
 struct CheckpointData {
 	#define PLFIELD(type, name) type name;
@@ -278,6 +250,8 @@ struct CheckpointData {
 	#undef FIELD
 	float m_rotation;
 	gd::Gamemode gamemode;
+	bool isHolding;
+	bool isHolding2;
 
 	static CheckpointData create(gd::PlayerObject* player) {
 		CheckpointData data;
@@ -290,6 +264,10 @@ struct CheckpointData {
 
 		data.m_rotation = player->getRotation();
 		data.gamemode = GetGamemode(player);
+
+		data.isHolding = player->m_isHolding;
+		data.isHolding2 = player->m_isHolding2;
+	
 		return data;
 	}
 
@@ -343,6 +321,7 @@ struct Checkpoint {
 	size_t activated_objects_p2_size;
 	std::map<int, ObjectData> objects;
 	double calculated_xpos;
+	std::vector<CCAction*> actions;
 };
 
 struct Replay {
@@ -375,14 +354,27 @@ public:
 
 	FORMATS format = META;
 
+	std::vector<ShakeFrame> shakes;
+	unsigned shakes_pos = 0;
+
+	std::vector<FPSFrame> framerates;
+	unsigned framerates_pos = 0;
+
 	HacksStr hacks;
 
+	std::string algorithm = "1";
+
+	bool currently_pressing = false;
+
 	bool export_to_bot_location = false;
+
+	bool disable_shakes = false;
 
 	bool clickbot_enabled = false;
 	float player_1_volume = 1.f;
 	float player_2_volume = 1.f;
 	float clickbot_volume_multiplier = 1.f;
+	float clickbot_volume_mult_saved = 1.f;
 
 	std::string player_1_path;
 	std::string player_2_path;
@@ -421,6 +413,8 @@ public:
 	std::chrono::duration<double> total_recording_time = std::chrono::duration<double>::zero();
 	int total_attempt_count = 1;
 
+	std::string rename_format = "_#";
+
 	Recorder recorder;
 	std::vector<Frame> inputs;
 
@@ -430,12 +424,11 @@ public:
 	std::vector<std::pair<float, std::string>> cps_over_percents;
 	std::vector<std::pair<float, std::string>> cps_over_percents_p2;
 
-
 	float fps = 60.f;
-	char macro_name[1000] = "output";
+	char macro_name[1000] = "Replay";
 
 	std::string error = "";
-	std::string conversion_message = "Waiting... Use the panel above to export/import";
+	std::string conversion_message = "Waiting... Use the panel above to export/import!";
 
 	std::chrono::steady_clock::time_point start = std::chrono::steady_clock::time_point();
 
@@ -765,6 +758,8 @@ public:
 	unsigned int frame = 0;
 
 	bool is_over_orb = false;
+
+	float xPosForTimeValue = 0.f;
 
 	bool click_both_players = false;
 	bool swap_player_input = false;

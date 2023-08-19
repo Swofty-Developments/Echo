@@ -14,11 +14,24 @@ ret_type __fastcall name##_h(__VA_ARGS__);
 
 namespace Hooks {
 
+	namespace LevelEditorLayer {
+		inline void(__thiscall* draw)(gd::LevelEditorLayer* self);
+		void __fastcall drawHook(gd::LevelEditorLayer* self, void*);
+
+		inline void(__thiscall* onPlaytest)(gd::LevelEditorLayer* self);
+		void __fastcall onPlaytestHook(gd::LevelEditorLayer* self, void*);
+
+		inline void(__thiscall* exit)(CCLayer* self, CCObject* sender);
+		void __fastcall exitHook(CCLayer* self, void*, CCObject* sender);
+	}
+
 	inline void(__thiscall* CCScheduler_update)(CCScheduler* self, float dt); void __fastcall CCScheduler_update_h(CCScheduler* self, int, float dt);
 
 	inline int(__fastcall* createCheckpoint)(gd::PlayLayer* self); int __fastcall createCheckpoint_h(gd::PlayLayer* self);
 
 	inline int(__fastcall* removeCheckpoint)(gd::PlayLayer* self); int __fastcall removeCheckpoint_h(gd::PlayLayer* self);
+
+	inline bool(__fastcall* menuLayerInit)(gd::MenuLayer* self); bool __fastcall menuLayerInit_h(gd::MenuLayer* self);
 
 	// 0xe5d60
 	inline gd::GameObject* (__fastcall* powerOffObject)(gd::GameObject* self); gd::GameObject* __fastcall powerOffObject_h(gd::GameObject* self);
@@ -30,7 +43,7 @@ namespace Hooks {
 	inline void (__fastcall* incrementJumps)(gd::PlayerObject* self); void __fastcall incrementJumps_h(gd::PlayerObject* self);
 
 	// 0x10ed50
-	inline void (__fastcall* bumpPlayer)(gd::GJBaseGameLayer* self, gd::PlayerObject* player, gd::GameObject* object); void __fastcall bumpPlayer_h(gd::GJBaseGameLayer* self, gd::PlayerObject* player, gd::GameObject* object);
+	_THISCALL_HOOK(bumpPlayer, void, gd::GJBaseGameLayer, gd::PlayerObject* player, gd::GameObject* object)
 
 	// 0x1f62c0
 	inline void (__fastcall* toggleDartMode)(gd::PlayerObject* self, bool toggle); void __fastcall toggleDartMode_h(gd::PlayerObject* self, bool toggle);
@@ -47,6 +60,15 @@ namespace Hooks {
 	inline void(__thiscall* CCKeyboardDispatcher_dispatchKeyboardMSG)(CCKeyboardDispatcher* self, int key, bool down); void __fastcall CCKeyboardDispatcher_dispatchKeyboardMSG_h(CCKeyboardDispatcher* self, int, int key, bool down);
 
 	namespace PlayLayer {
+
+		inline void(__thiscall* lightningFlash)(gd::PlayLayer* self, CCPoint p, _ccColor3B c);
+		void __fastcall lightningFlash_h(gd::PlayLayer* self, void* edx, CCPoint p, _ccColor3B c);
+
+		inline void(__thiscall* triggerObject)(gd::EffectGameObject* self, gd::GJBaseGameLayer* idk);
+		void __fastcall triggerObject_h(gd::EffectGameObject* self, void*, gd::GJBaseGameLayer* idk);
+
+		_THISCALL_HOOK(pauseGame, void, gd::PlayLayer, bool)
+
 		inline bool(__thiscall* init)(gd::PlayLayer*, gd::GJGameLevel* level); bool __fastcall init_h(gd::PlayLayer* self, void* edx, gd::GJGameLevel* level);
 
 		inline void(__thiscall* updateVisibility)(gd::PlayLayer* self); void __fastcall updateVisibility_h(gd::PlayLayer* self);

@@ -243,41 +243,41 @@ struct ObjectData {
 	FIELD(double, m_unknown20) \
 
 struct CheckpointData {
-	#define PLFIELD(type, name) type name;
-	#define FIELD(type, name) type name;
-		PLAYER_FIELDS
-	#undef PLFIELD
-	#undef FIELD
-	float m_rotation;
+#define PLFIELD(type, name) type name;
+#define FIELD(type, name) type name;
+	PLAYER_FIELDS
+#undef PLFIELD
+#undef FIELD
+		float m_rotation;
 	gd::Gamemode gamemode;
 	bool isHolding;
 	bool isHolding2;
 
 	static CheckpointData create(gd::PlayerObject* player) {
 		CheckpointData data;
-		
-		#define FIELD(type, name) data.name = player->name;
-		#define PLFIELD(type, name) data.name = PLAYLAYER->name;
-			PLAYER_FIELDS
-		#undef PLFIELD
-		#undef FIELD
 
-		data.m_rotation = player->getRotation();
+#define FIELD(type, name) data.name = player->name;
+#define PLFIELD(type, name) data.name = PLAYLAYER->name;
+		PLAYER_FIELDS
+#undef PLFIELD
+#undef FIELD
+
+			data.m_rotation = player->getRotation();
 		data.gamemode = GetGamemode(player);
 
 		data.isHolding = player->m_isHolding;
 		data.isHolding2 = player->m_isHolding2;
-	
+
 		return data;
 	}
 
 	void apply(gd::PlayerObject* player) {
-		#define FIELD(type, name) player->name = name;
-		#define PLFIELD(type, name) PLAYLAYER->name = name;
-			PLAYER_FIELDS
-		#undef FIELD
-		#undef PLFIELD
-		player->setRotation(m_rotation);
+#define FIELD(type, name) player->name = name;
+#define PLFIELD(type, name) PLAYLAYER->name = name;
+		PLAYER_FIELDS
+#undef FIELD
+#undef PLFIELD
+			player->setRotation(m_rotation);
 	}
 
 	static gd::Gamemode GetGamemode(gd::PlayerObject* p)
@@ -459,7 +459,7 @@ public:
 				ImGui::IsKeyPressed(keybind.GetKey().value(), false) &&
 				io.KeyCtrl == keybind.GetCtrl() &&
 				io.KeyShift == keybind.GetShift() &&
-				io.KeyAlt == keybind.GetAlt()) {
+				io.KeyAlt == keybind.GetAlt() && !ImGui::GetIO().WantTextInput) {
 				// Call the Keybindable stored in the map
 				keybindable->ran();
 			}
@@ -470,7 +470,7 @@ public:
 
 	bool show_frame = false;
 	bool show_cps = false;
-	bool show_percent = true;
+	bool show_percent = false;
 	int percent_accuracy = 1;
 	bool show_time = false;
 	bool show_recording = true;
@@ -506,30 +506,30 @@ public:
 
 	bool file_dialog = false;
 
-	float recording_label_x = 50.f;
-	float recording_label_y = 50.f;
-	float recording_label_scale = 0.4;
+	float recording_label_x = 0.f;
+	float recording_label_y = 15.f;
+	float recording_label_scale = 0.75;
 	float recording_label_opacity = 70;
 
-	float frame_counter_x = 50.f;
-	float frame_counter_y = 50.f;
+	float frame_counter_x = 3.f;
+	float frame_counter_y = 268.f;
 	float frame_counter_scale = 0.4;
-	float frame_counter_opacity = 70;
+	float frame_counter_opacity = 35;
 
-	float cps_counter_x = 30.f;
-	float cps_counter_y = 20.f;
+	float cps_counter_x = 3.f;
+	float cps_counter_y = 280.f;
 	float cps_counter_scale = 0.4;
-	float cps_counter_opacity = 70;
+	float cps_counter_opacity = 35;
 
-	float percent_counter_x = 5.f;
-	float percent_counter_y = 315.f;
-	float percent_scale = 0.4;
-	float percent_opacity = 70;
+	float percent_counter_x = 3.f;
+	float percent_counter_y = 310.f;
+	float percent_scale = 0.55;
+	float percent_opacity = 35;
 
-	float time_counter_x = 90.f;
-	float time_counter_y = 20.f;
+	float time_counter_x = 3.f;
+	float time_counter_y = 294.f;
 	float time_scale = 0.4;
-	float time_opacity = 70;
+	float time_opacity = 35;
 
 	unsigned frame_advance_hold_duration = 300; // ms
 	unsigned frame_advance_delay = 50; // ms
@@ -579,17 +579,24 @@ public:
 			if (last_input_itr != inputs.rend()) {
 				lastInput = *last_input_itr;
 				wasPressingDown = lastInput.pressingDown;
+				bool playerInverse = isPlayer2 ? click_inverse_p2 : click_inverse_p1;
 
 				// If the player is not currently pressing, but was pressing on the last input
 				if (!player->m_isHolding && wasPressingDown && !isDashing) {
 					if (lastInput.number != get_frame()) {
-						add_input({ get_frame(), false, isPlayer2 });
+						if (playerInverse && !wasPressingDown)
+							add_input({ get_frame(), false, isPlayer2 });
+						else if (!playerInverse)
+							add_input({ get_frame(), false, isPlayer2 });
 					}
 				}
 				// If the player is currently pressing, but was not pressing on the last input
 				else if (player->m_isHolding && !wasPressingDown && !isDashing) {
 					if (lastInput.number != get_frame()) {
-						add_input({ get_frame(), true, isPlayer2 });
+						if (playerInverse && wasPressingDown)
+							add_input({ get_frame(), true, isPlayer2 });
+						else if (!playerInverse)
+							add_input({ get_frame(), true, isPlayer2 });
 
 						// Handle Orb Checking
 						orbChecking(player->getPosition());
@@ -625,7 +632,7 @@ public:
 		return result;
 	}
 
-	void orbChecking(cocos2d::CCPoint playerPosition) { 
+	void orbChecking(cocos2d::CCPoint playerPosition) {
 		cocos2d::CCArray* children = gd::GameManager::sharedState()->getPlayLayer()->m_pObjects;
 		printf("Number of Children: %ld\n", children->count());
 		CCObject* it = NULL;

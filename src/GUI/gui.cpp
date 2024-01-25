@@ -183,7 +183,7 @@ double evalExpression(const std::vector<std::string>& tokens, std::map<std::stri
 	return result;
 }
 
-std::string echo_version = "Echo v1.0";
+std::string echo_version = "Echo v1.1";
 
 int getRandomInt(int N) {
 	// Seed the random number generator with current time
@@ -248,12 +248,14 @@ void GUI::draw() {
 	Logic::get().processKeybinds();
 	if (!g_has_imported)
 		import_theme(".echo\\settings\\theme.ui");
+	strcpy(theme_name, "My Theme");
 	g_has_imported = true;
 
 	if (g_font) ImGui::PushFont(g_font);
 
 	if (PLAYLAYER && Logic::get().is_recording()) {
-		double frame_time = CCDirector::sharedDirector()->getAnimationInterval();
+		double frame_time = ImGui::GetIO().DeltaTime;
+		if (!Logic::get().real_time_mode && Logic::get().speedhack < 1.f) frame_time /= Logic::get().speedhack;
 		Logic::get().total_recording_time += std::chrono::duration<double>(frame_time);
 	}
 
@@ -407,6 +409,9 @@ void GUI::import_theme(std::string path) {
 
 	ImGuiStyle& style = ImGui::GetStyle();
 
+	auto file_name = fs::path(path).stem().string();
+	strcpy(theme_name, file_name.c_str());
+
 	if (!file.is_open())
 	{
 		printf("Failed to open theme.ui for reading");
@@ -485,6 +490,16 @@ void GUI::import_theme(std::string path) {
 		auto colorArray = json["player_2_button_color"];
 		ImVec4 color(colorArray[0], colorArray[1], colorArray[2], colorArray[3]);
 		player_2_button_color = color;
+	}
+	if (json.contains("input_selected_color_p1")) {
+		auto colorArray = json["input_selected_color_p1"];
+		ImVec4 color(colorArray[0], colorArray[1], colorArray[2], colorArray[3]);
+		input_selected_color_p1 = color;
+	}
+	if (json.contains("input_selected_color_p2")) {
+		auto colorArray = json["input_selected_color_p2"];
+		ImVec4 color(colorArray[0], colorArray[1], colorArray[2], colorArray[3]);
+		input_selected_color_p2 = color;
 	}
 	if (json.contains("popup_bg_color")) {
 		auto colorArray = json["popup_bg_color"];
@@ -569,6 +584,8 @@ void GUI::export_theme(std::string path, bool custom_path) {
 	json["player_1_button_color"] = { player_1_button_color.x, player_1_button_color.y, player_1_button_color.z, player_1_button_color.w };
 	json["player_2_button_color"] = { player_2_button_color.x, player_2_button_color.y, player_2_button_color.z, player_2_button_color.w };
 	json["popup_bg_color"] = { popup_bg_color.x, popup_bg_color.y, popup_bg_color.z, popup_bg_color.w };
+	json["input_selected_color_p1"] = { input_selected_color_p1.x, input_selected_color_p1.y, input_selected_color_p1.z, input_selected_color_p1.w };
+	json["input_selected_color_p2"] = { input_selected_color_p2.x, input_selected_color_p2.y, input_selected_color_p2.z, input_selected_color_p2.w };
 
 	// Save the json object to a file
 	std::string name = "";
@@ -625,7 +642,7 @@ void GUI::ui_editor() {
 		}
 
 		ImGui::PushItemWidth(150);
-		ImGui::InputText("", theme_name, MAX_PATH);
+		ImGui::InputText("Name", theme_name, MAX_PATH);
 		ImGui::PopItemWidth();
 
 		ImGui::SameLine();
@@ -744,6 +761,20 @@ void GUI::ui_editor() {
 					MyColorPicker(player_2_button_color, "Player 2 In Editor");
 					ImGui::SameLine(0.0f, style.ItemInnerSpacing.x);
 					ImGui::TextUnformatted("Player 2 In Editor");
+					ImGui::PopID();
+				}
+				if (filter.PassFilter("Player 1 In Editor (Selected)")) {
+					ImGui::PushID(997);
+					MyColorPicker(input_selected_color_p1, "Player 1 In Editor (Selected)");
+					ImGui::SameLine(0.0f, style.ItemInnerSpacing.x);
+					ImGui::TextUnformatted("Player 1 In Editor (Selected)");
+					ImGui::PopID();
+				}
+				if (filter.PassFilter("Player 2 In Editor (Selected)")) {
+					ImGui::PushID(996);
+					MyColorPicker(input_selected_color_p2, "Player 2 In Editor (Selected)");
+					ImGui::SameLine(0.0f, style.ItemInnerSpacing.x);
+					ImGui::TextUnformatted("Player 2 In Editor (Selected)");
 					ImGui::PopID();
 				}
 
@@ -966,7 +997,10 @@ void GUI::editor() {
 				int frameDiff = std::abs(static_cast<int>(inputs[i].number - logic.get_frame()));
 				if (frameDiff < closestFrameDiff) {
 					closestFrameDiff = frameDiff;
-					closestInputIndex = i;
+					if (editor_auto_scroll)
+						closestInputIndex = i;
+					else
+						closestInputIndex = selectedInput;
 				}
 			}
 
@@ -981,9 +1015,10 @@ void GUI::editor() {
 
 				if (i == closestInputIndex) {
 					// Make the closest input's button brighter
-					color.x = max(color.x - 0.5f, 0);
-					color.y = max(color.y - 0.5f, 0);
-					color.z = max(color.z - 0.5f, 0);
+					if (inputs[i].isPlayer2)
+						color = input_selected_color_p2;
+					else
+						color = input_selected_color_p1;
 				}
 
 				ImGui::PushStyleColor(ImGuiCol_Button, color);
@@ -995,6 +1030,7 @@ void GUI::editor() {
 				if (ImGui::Button(text.c_str(), ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
 					selectedInput = i;
 					newInput = inputs[i];
+					editor_auto_scroll = false;
 				}
 
 				// Automatically select the closest input to the current frame
@@ -1070,6 +1106,9 @@ void GUI::editor() {
 			}
 			ImGui::Separator();
 			ImGui::Text("Current Frame: %i", logic.get_frame());
+			if (ImGui::Button("Set to Current Frame")) {
+				newInput.number = logic.get_frame();
+			}
 			ImGui::Checkbox("Auto Scroll To Frame", &editor_auto_scroll);
 			ImGui::Checkbox("Edit Plain Text", &plaintext_editing);
 			inputs[selectedInput] = newInput;
@@ -1098,6 +1137,7 @@ void GUI::editor() {
 			ImGui::Separator();
 			ImGui::EndDisabled();
 			ImGui::Text("Current Frame: %i", logic.get_frame());
+			ImGui::Button("Set to Current Frame");
 			ImGui::Checkbox("Auto Scroll To Frame", &editor_auto_scroll);
 			ImGui::Checkbox("Edit Plain Text", &plaintext_editing);
 		}
@@ -1644,6 +1684,8 @@ void GUI::tools() {
 				std::string filePath = ImGuiFileDialog::Instance()->GetCurrentPath();
 				std::vector<Frame> before_inputs = logic.get_inputs();
 				logic.inputs.clear();
+				auto recording_time = logic.total_recording_time;
+				int attempts = logic.total_attempt_count;
 
 				std::string suffix = ".echo";
 				if (filePathName.size() >= suffix.size() && filePathName.rfind(suffix) == (filePathName.size() - suffix.size()))
@@ -1654,6 +1696,8 @@ void GUI::tools() {
 				logic.inputs.insert(logic.inputs.end(), before_inputs.begin(), before_inputs.end());
 
 				logic.sort_inputs();
+				logic.total_recording_time += recording_time;
+				logic.total_attempt_count += attempts;
 			}
 			ImGuiFileDialog::Instance()->Close();
 		}
@@ -1662,7 +1706,7 @@ void GUI::tools() {
 
 		const char* noclip_options[] = { "Off", "Player 1", "Player 2", "Both" };
 
-		ImGui::PushItemWidth(docked ? 200 : 175);
+		ImGui::PushItemWidth(docked ? 150 : 175);
 		if (ImGui::BeginCombo("Noclip##dropdown_noclip", noclip_options[selected_noclip]))
 		{
 			for (int i = 0; i < IM_ARRAYSIZE(noclip_options); i++)
@@ -1698,6 +1742,10 @@ void GUI::tools() {
 		}
 
 		ImGui::PopItemWidth();
+
+		ImGui::SameLine();
+
+		ImGui::Checkbox("Real Time", &logic.real_time_mode);
 
 		ImGui::Checkbox("Click For Both Players", &logic.click_both_players);
 
@@ -1783,6 +1831,7 @@ void GUI::tools() {
 		CHECK_KEYBIND("noEsc");
 
 		ImGui::Checkbox("###layout_checkbox", &logic.hacks.layoutMode);
+		CHECK_KEYBIND("layout");
 
 		ImGui::SameLine();
 
@@ -1803,6 +1852,7 @@ void GUI::tools() {
 		ImGui::SameLine();
 
 		ImGui::Checkbox("###hitbox_checkbox", &logic.hacks.showHitboxes);
+		CHECK_KEYBIND("hitbox");
 
 		ImGui::SameLine();
 		bool open_hitbox_modal = true;
@@ -1978,11 +2028,36 @@ void GUI::tools() {
 		HelpMarker("Saving debug information allows for bugfixing and checking accuracy in the replay.");
 
 		ImGui::SameLine();
-		if (ImGui::Button("Open Debug Console")) {
+		if (ImGui::Button("Open Console")) {
 			// Allows for debugging, can be removed later
 			AllocConsole();
 			freopen("CONOUT$", "w", stdout);  // Redirects stdout to the new console
 			std::printf("Opened Debugging Console");
+		}
+
+		bool open_label_modal = true;
+		ImGui::SameLine();
+		if (ImGui::Button("View Metadata", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+			ImGui::OpenPopup("Replay Metadata");
+		}
+		if (ImGui::BeginPopupModal("Replay Metadata", &open_label_modal, ImGuiWindowFlags_AlwaysAutoResize)) {
+			double total_seconds = logic.total_recording_time.count();
+			int hours = static_cast<int>(total_seconds / 3600);
+			int minutes = static_cast<int>((total_seconds - hours * 3600) / 60);
+			int seconds = static_cast<int>(total_seconds - hours * 3600 - minutes * 60);
+			// Format the time as HH:MM:SS
+			std::ostringstream oss;
+			oss << std::setfill('0');
+			oss << std::setw(2) << hours << ":"
+				<< std::setw(2) << minutes << ":"
+				<< std::setw(2) << seconds;
+			std::string time_str = oss.str();
+			int clicks_amt = 0;
+			for (auto& input : logic.inputs)  if (input.pressingDown) clicks_amt++;
+			ImGui::Text("Recording Time: %s", time_str.c_str());
+			ImGui::Text("Total Attempts: %i", logic.total_attempt_count);
+			ImGui::Text("Clicks Count: %i", clicks_amt);
+			ImGui::EndPopup();
 		}
 
 		if (docked)
@@ -2913,14 +2988,6 @@ void GUI::main() {
 		if (ImGui::Button("Reset Macro", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
 			if (!logic.inputs.empty()) {
 				ImGui::OpenPopup("Confirm Reset");
-
-				ImVec2 popupSize(200, 100);
-				ImVec2 popupPos(
-					(ImGui::GetIO().DisplaySize.x - popupSize.x) / 2.f,
-					(ImGui::GetIO().DisplaySize.y - popupSize.y) / 2.f
-				);
-
-				ImGui::SetNextWindowPos(popupPos);
 			}
 		}
 
@@ -2962,6 +3029,7 @@ void GUI::main() {
 				logic.write_file(logic.macro_name);
 			}
 		}
+		CHECK_KEYBIND("saveFile");
 
 		ImGui::SameLine();
 
@@ -2986,6 +3054,7 @@ void GUI::main() {
 			logic.format = logic.META;
 		}
 
+		CHECK_KEYBIND("loadFile");
 		if (ImGuiFileDialog::Instance()->Display("ImportNormal", ImGuiWindowFlags_NoCollapse, ImVec2(500, 200)))
 		{
 			if (ImGuiFileDialog::Instance()->IsOk())
@@ -3139,13 +3208,26 @@ void GUI::init() {
 		}));
 
 	std::unique_ptr<KeybindableBase> advanceAction = std::unique_ptr<KeybindableBase>(new Keybindable([this]() {
-		if (Logic::get().start == std::chrono::steady_clock::time_point())
-			Logic::get().start = std::chrono::steady_clock::now();
-		Logic::get().frame_advance = false;
-		Hooks::CCScheduler_update_h(gd::GameManager::sharedState()->getScheduler(), 0, 1.f / Logic::get().fps / Logic::get().speedhack);
-		Logic::get().frame_advance = true;
+		if (!ImGui::GetIO().WantTextInput && PLAYLAYER) {
+			if (Logic::get().start == std::chrono::steady_clock::time_point())
+				Logic::get().start = std::chrono::steady_clock::now();
+			Logic::get().frame_advance = false;
+			Hooks::CCScheduler_update_h(gd::GameManager::sharedState()->getScheduler(), 0, 1.f / Logic::get().fps / Logic::get().speedhack);
+			Logic::get().frame_advance = true;
+		}
 		}));
 
+	std::unique_ptr<KeybindableBase> beginAdvanceAction = std::unique_ptr<KeybindableBase>(new Keybindable([this]() {
+		if (!ImGui::GetIO().WantTextInput && PLAYLAYER) {
+			Logic::get().frame_advance = !Logic::get().frame_advance;
+		}
+		}));
+
+	std::unique_ptr<KeybindableBase> autoClicker = std::unique_ptr<KeybindableBase>(new Keybindable([this]() {
+		if (!ImGui::GetIO().WantTextInput && PLAYLAYER) {
+			Logic::get().autoclicker = !Logic::get().autoclicker;
+		}
+		}));
 
 	std::unique_ptr<KeybindableBase> renderingAction = std::unique_ptr<KeybindableBase>(new Keybindable([this]() {
 		Logic::get().recorder.m_recording = !Logic::get().recorder.m_recording;
@@ -3169,7 +3251,7 @@ void GUI::init() {
 		}
 
 		if (change) {
-			logic.toggle_playing();
+			logic.toggle_recording();
 			logic.sort_inputs();
 		}
 		}));
@@ -3203,6 +3285,16 @@ void GUI::init() {
 		}
 		}));
 
+	std::unique_ptr<KeybindableBase> saveFileAction = std::unique_ptr<KeybindableBase>(new Keybindable([this]() {
+		auto& logic = Logic::get();
+		logic.write_file(logic.macro_name);
+		}));
+
+	std::unique_ptr<KeybindableBase> loadFileAction = std::unique_ptr<KeybindableBase>(new Keybindable([this]() {
+		auto& logic = Logic::get();
+		logic.read_file(logic.macro_name, logic.file_dialog);
+		}));
+
 	Logic::get().keybinds.SetAction("audioHack", std::move(audioSpeedHackAction));
 
 	Logic::get().keybinds.SetAction("anticheat", std::move(anticheatAction));
@@ -3214,11 +3306,17 @@ void GUI::init() {
 	Logic::get().keybinds.SetAction("toggleRecording", std::move(recordingAction));
 	Logic::get().keybinds.SetAction("togglePlaying", std::move(playingAction));
 	Logic::get().keybinds.SetAction("advancing", std::move(advanceAction));
+	Logic::get().keybinds.SetAction("frameAdvance", std::move(beginAdvanceAction));
 	Logic::get().keybinds.SetAction("resetLevel", std::move(resetAction));
 
 	Logic::get().keybinds.SetAction("outputPercents", std::move(outputPercentAction));
+	Logic::get().keybinds.SetAction("saveFile", std::move(saveFileAction));
+	Logic::get().keybinds.SetAction("loadFile", std::move(loadFileAction));
 
 	SET_BIND(realTimeMode, Logic::get().real_time_mode);
+	
+	SET_BIND(layout, Logic::get().hacks.layoutMode);
+	SET_BIND(hitbox, Logic::get().hacks.showHitboxes);
 	
 	SET_BIND(showFrame, Logic::get().show_frame);
 
@@ -3238,9 +3336,7 @@ void GUI::init() {
 	SET_BIND(noOverwrite, Logic::get().no_overwrite);
 	SET_BIND(ignoreActions, Logic::get().ignore_actions_at_playback);
 	SET_BIND(modifyRespawn, Logic::get().respawn_time_modified);
-	SET_BIND(autoClicker, Logic::get().autoclicker);
 	SET_BIND(autoDisableClicker, Logic::get().autoclicker_auto_disable);
-	SET_BIND(frameAdvance, Logic::get().frame_advance);
 	SET_BIND(menuBind, show_window);
 	SET_BIND(showRecord, Logic::get().show_recording);
 
